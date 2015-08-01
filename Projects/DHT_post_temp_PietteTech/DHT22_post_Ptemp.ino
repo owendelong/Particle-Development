@@ -12,7 +12,7 @@
 #define CGI_PATH "/cgi-bin/post_temp.cgi"
 
 char MY_ID[40] = "Invalid_Photon";
-#define MY_VER "0.01t"
+#define MY_VER "0.01u"
 
 #define DHTPOWER 5
 #define DHTPIN 6
@@ -78,7 +78,6 @@ void loop() {
     Spark.process();
   }
   delay(1000); // Let probe stabilize after powerup.
-//  result = DHT.acquireAndWait(); // This sometimes blocks for too long
   for(i=0; i<5; i++)
   {
     if (i > 0)
@@ -327,10 +326,10 @@ void loop() {
   Serial.print("Application>\tHTTP Response Body: ");
   Serial.println(response.body);
   startup=millis();
-  Serial.print("10 second processing loop: ");
-  while (millis() < startup+15000)
+  Serial.print("30 second processing loop: ");
+  while (millis() < startup+30000 && millis() > startup) // Terminate on millis() counter wrap
   {
-    // Wait 10 seconds for queued update
+    // Wait 15 seconds for queued update
     Spark.process();
     delay(100);
 
