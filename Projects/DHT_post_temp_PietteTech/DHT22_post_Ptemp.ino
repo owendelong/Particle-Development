@@ -93,17 +93,6 @@ void loop() {
       delay(2000);
     }
     startup = millis();
-    // Wait up to 5 seconds for acquisition. Accept short wait if millis counter wrap.
-//     while (millis() >= startup && startup+5000 > millis() && DHT.acquiring())
-//     {
-//       Serial.print(".");
-//       Spark.process();
-//       delay(1000);
-//     }
-//     Serial.print((millis() >= startup) ? "M" : "m");
-//     Serial.print((startup+5000 > millis()) ? "T" : "t");
-//     Serial.println(DHT.acquiring() ? "A" : "a");
-//     result = DHT.getStatus();
     if (result == DHTLIB_OK) break; // Got a valid sample.
     Serial.print("Failed result: ");
     Serial.println(result);
