@@ -6,17 +6,22 @@
 
 // This #include statement was automatically added by the Spark IDE.
 #include "PietteTech_DHT.h"
+// Library required ISR wrapper declaration
+void dht_wrapper(); // must be declared before the lib initialization
+
+
+#define DHTPOWER 5
+#define DHTPIN 6
+#define DHTTYPE DHT22
 
 #define SERVER "www.delong.com"
 #define PORT 80
 #define CGI_PATH "/cgi-bin/post_temp.cgi"
 
 char MY_ID[40] = "Invalid_Photon";
-#define MY_VER "0.01u"
 
-#define DHTPOWER 5
-#define DHTPIN 6
-#define DHTTYPE DHT22
+
+#define MY_VER "0.02by"                      //Version Number String
 
 #define CYCLE_DURATION 60 // Poll at 60 second intervals
 #define LOGGING
@@ -31,13 +36,13 @@ http_header_t headers[] = {
     { NULL, NULL },
 };
 
-//declaration
-void dht_wrapper(); // must be declared before the lib initialization
+const char *HAS_EXT_ANT[] = {
+    "23002f000847343337373738",
+    "3c002e000347343337373738",
+    NULL,
+};
 
-// Lib instantiate
-PietteTech_DHT DHT(DHTPIN, DHTTYPE, dht_wrapper);
-
-uint32_t next_time = millis() + (CYCLE_DURATION * 1000);
+uint32_t next_time = millis() + (CYCLE_DURATION * 1000) - 1000;
 
 http_request_t request = {0};
 http_response_t response;
@@ -46,11 +51,29 @@ void dht_wrapper() {
     DHT.isrCallback();
 }
 
+
+bool is_external(const char *MY_ID)
+{
+  uint8_t i;
+  for(i=0; HAS_EXT_ANT[i] != NULL; i++)
+  {
+    if(strncmp(MY_ID, HAS_EXT_ANT[i], 40) == 0) return true;
+  }
+  return false;
+}
+
 void setup() {
     Serial.begin(115200);
+    Serial.println("Launching");
     pinMode(7, OUTPUT);
     digitalWrite(7, LOW);
     (System.deviceID()).toCharArray(MY_ID, 40);
+    Serial.print("My ID is ");
+    Serial.println(MY_ID);
+    if (is_external(MY_ID))
+    {
+      WiFi.selectAntenna(ANT_EXTERNAL);
+    }
 
 }
 
@@ -164,8 +187,8 @@ void loop() {
   String(hum).toCharArray(hbuf, 6);
   if (result == DHTLIB_OK)
   {
-    sprintf(Query, "%s?my_id=%s&ver=%s&sensor_unit_1=%s&temp_1=%s&hum_1=%s&logmsg=%s&next_time=%ld&current_time=%ld",
-        CGI_PATH, MY_ID, MY_VER, MY_ID, tbuf, hbuf, logbuf, next_time, millis());
+    sprintf(Query, "%s?my_id=%s&ver=%s&ant=%s&sensor_unit_1=%s&temp_1=%s&hum_1=%s&logmsg=%s&next_time=%ld&current_time=%ld",
+        CGI_PATH, MY_ID, MY_VER, is_external(MY_ID) ? "ext" : "int", MY_ID, tbuf, hbuf, logbuf, next_time, millis());
   }
   else
   {
@@ -188,7 +211,10 @@ void loop() {
     RGB.brightness(255);
     Serial.println("Not connected");
     delay(250);
-    System.sleep(SLEEP_MODE_DEEP, (next_time - millis()) / 4000); //  Connect failed. Sleep 1/4 of normal time and retry.
+    next_time -= millis();
+    next_time /= 1000;
+    if(next_time < 5 || next_time > CYCLE_DURATION) next_time = 5;
+    System.sleep(SLEEP_MODE_DEEP, next_time); //  Connect failed. Sleep 1/4 of normal time and retry.
     delay(1000);
   }
   // Send the request
@@ -338,7 +364,10 @@ void loop() {
   // Sleep until next report period
   Serial.println("Sleeping.");
   delay(250);
-  System.sleep(SLEEP_MODE_DEEP, (next_time - millis())/1000);
+  next_time -= millis();
+  next_time /= 1000;
+  if (next_time < 5 || next_time > CYCLE_DURATION) next_time = 5;
+  System.sleep(SLEEP_MODE_DEEP, next_time);
   delay(2000);
 
 }
